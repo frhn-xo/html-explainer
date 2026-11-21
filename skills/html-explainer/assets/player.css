@@ -1,0 +1,14 @@
+/* Player styles for playable diagrams (html-explainer skill, references/playable.md). Paste into the page's <style>.
+   They use the template's DESIGN.md roles (--page, --card, --text, --line, --canvas, --on-color). */
+.player { margin: var(--s-sm) 0; }
+.player-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
+/* button-secondary on dark; the main action is a light button-on-color; 44px touch targets */
+.player-bar button { font: 600 14px/1 var(--font-body); height: 44px; padding: 0 20px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--page); color: var(--text); cursor: pointer; }
+.player-bar button.primary { background: var(--canvas); border-color: var(--canvas); color: var(--on-color); }
+.player-step { margin-left: auto; font: 500 13px/1.4 var(--font-body); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.player-caption { min-height: 3.2em; padding: var(--s-md) var(--s-lg); background: var(--card); border-radius: var(--r-lg); color: var(--text); }
+.player-caption .cap-step { font-weight: 600; margin-right: var(--s-xxs); }
+.player-caption code { background: var(--page); }
+.dia svg .play-layer { pointer-events: none; }
+/* the box in play: a cream outline */
+.dia svg g.node.play-active > rect, .dia svg g.node.play-active > polygon, .dia svg g.node.play-active > path { stroke: var(--canvas) !important; stroke-width: 4px !important; }

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<!--
+  Starter for an "explain it using HTML" page. Rules: the html-explainer skill (SKILL.md and references/, one folder up from this file)
+  Replace: {{TITLE}} (2-4 word name) · {{LEAD}} (ticket · screen or area · one-line scope)
+           {{INDEX}} (<li> entries of the left sidebar) · {{BODY}} (only the sections the request needs)
+  Sidebar group:  <li><details data-group="ID" open><summary data-href="#ID"><span>Title</span></summary><ol>…</ol></details></li>
+  Sidebar leaf:   <li><a href="#ID">Title</a></li>
+  Section:        <details class="sec l2" open id="ID"><summary><h2>Title</h2></summary> … </details>   (l3 + h3 for sub-sections)
+  Problem section (only when the page explains a problem):
+                  <div class="problem" id="problem"><b>The problem, in plain words.</b> … <div class="cells"><div class="cell ok"><small>Today</small>…</div><span class="arrow">→</span><div class="cell bad"><small>…</small>…</div></div> …</div>
+  Task (only once tasks are discussed):
+                  <div class="step" id="task-1"><span class="check"></span><span class="num">1</span><div><p class="step-title">Title <span class="st open">Open</span></p><p>…</p></div></div>
+                  done: <div class="step done" …> and <span class="st done">Done (date)</span>
+  Linked pages (only when the page is linked with other pages; always the last section, both ways):
+                  <details class="sec l2" open id="linked-pages"><summary><h2>Linked pages</h2></summary><ul><li><a href="….html">Its h1</a>: what is there.</li></ul></details>
+                  sidebar, last entry: <li><a href="#linked-pages">Linked pages</a></li>
+  Diagram block:  h4.dia-title · div.legend (only if colours: <span><span class="sw-ochre"></span> what it means</span>, never the colour's name) · div.dia > pre.mermaid (HTML-escaped). Nothing under it.
+                  The script adds the zoom buttons and the resize bar to every div.dia.
+  Lane colours:   style X fill:#e8b94a,stroke:#e8b94a,color:#0a0a0a   (DESIGN.md brand colour; color: keeps the lane title dark)
+  Links inside diagrams: click NODE href "path/to/file.py#L12" "Open file.py:12"      (external URL: add _blank)
+  Change the localStorage key 'toc-open-CHANGE-ME' to one unique to the page.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* The look follows references/DESIGN.md, always dark: the page floor is its surface-dark.
+     Two deliberate exceptions to DESIGN.md: the page is always dark (DESIGN.md is cream),
+     and every link is a blue pill (DESIGN.md styles links like body text). See references/page.md, "The look". */
+  :root {
+    color-scheme: dark;
+    /* DESIGN.md palette */
+    --ink: #0a0a0a; --body: #3a3a3a; --muted: #6a6a6a;
+    --canvas: #fffaf0; --surface-card: #f5f0e0;
+    --surface-dark: #0a1a1a; --surface-dark-elevated: #1a2a2a;
+    --on-primary: #ffffff; --on-dark: #ffffff; --on-dark-soft: #a0a0a0;
+    --brand-pink: #ff4d8b; --brand-teal: #1a3a3a; --brand-lavender: #b8a4ed; --brand-peach: #ffb084;
+    --brand-ochre: #e8b94a; --brand-mint: #a4d4c5; --brand-coral: #ff6b5a;
+    --success: #22c55e; --warning: #f59e0b; --error: #ef4444;
+    /* roles on the dark page */
+    --page: var(--surface-dark);              /* page floor */
+    --card: var(--surface-dark-elevated);     /* cards: tasks, diagram panel, caption, code */
+    --text: var(--on-dark);                   /* headings and running text */
+    --text-muted: var(--on-dark-soft);        /* sidebar, lead, captions */
+    --line: var(--body);                      /* 1px hairlines on dark */
+    --on-color: var(--ink);                   /* text on lavender, mint, ochre, peach, and on light buttons */
+    --link: #4493f8;                          /* a link's text on the dark page: blue, in a dark pill (page.md, "Three kinds of link") */
+    /* DESIGN.md rounded and spacing */
+    --r-xs: 6px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-pill: 9999px;
+    --s-xxs: 4px; --s-xs: 8px; --s-sm: 12px; --s-md: 16px; --s-lg: 24px; --s-xl: 32px; --s-xxl: 48px; --s-section: 96px;
+    /* DESIGN.md type: Plain Black is licensed to Clay, so display sizes use its documented substitute, Inter 500 */
+    --font-display: "Plain Black", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  /* body-md */
+  body { margin: 0; background: var(--page); color: var(--text); font: 400 16px/1.55 var(--font-body); }
+  b, strong { color: var(--text); font-weight: 600; }
+
+  /* ===== Layout: max content 1280px ===== */
+  .layout { display: grid; grid-template-columns: 264px minmax(0, 1fr); max-width: 1280px; margin: 0 auto; }
+  main { max-width: 1000px; width: 100%; padding: var(--s-xxl) var(--s-xl) var(--s-section); }
+
+  /* ===== Sidebar: nav-link type, category-tab pills for the section being read ===== */
+  .toc { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: var(--s-xxl) var(--s-sm) var(--s-xl) var(--s-md); background: var(--page); font: 500 14px/1.4 var(--font-body); }
+  .toc-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-xs); margin: 0 0 var(--s-sm) var(--s-xs); }
+  /* caption-uppercase */
+  .toc-title { font: 600 12px/1.4 var(--font-body); letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin: 0; }
+  .toc-tools { display: flex; gap: var(--s-xxs); }
+  .toc-tools button { font: 600 12px/1 var(--font-body); padding: 6px 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--page); color: var(--text); cursor: pointer; }
+  .toc ol { list-style: none; margin: 0; padding: 0; }
+  .toc ol ol { padding-left: var(--s-sm); }
+  .toc li a { display: block; padding: 7px var(--s-md) 7px 26px; margin: 2px 0; border-radius: var(--r-pill); color: var(--text-muted); text-decoration: none; }
+  .toc li a.active { background: var(--card); color: var(--text); }
+  .toc li li a { font-size: 13px; }
+  .toc summary { display: flex; align-items: center; list-style: none; cursor: pointer; border-radius: var(--r-pill); user-select: none; }
+  .toc summary::-webkit-details-marker { display: none; }
+  .toc summary::before { content: ""; flex: none; width: 6px; height: 6px; margin: 0 -14px 0 10px; border-right: 1.5px solid var(--text-muted); border-bottom: 1.5px solid var(--text-muted); transform: rotate(-45deg); transition: transform .15s; }
+  .toc details[open] > summary::before { transform: rotate(45deg); }
+  .toc summary span { flex: 1; min-width: 0; padding: 7px var(--s-md) 7px 26px; margin: 2px 0; border-radius: var(--r-pill); color: var(--text); }
+  .toc > ol > li > details > summary > span { font-weight: 600; }
+  .toc summary.active span { background: var(--card); color: var(--text); }
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; }
+    .toc { position: static; height: auto; padding: var(--s-lg) var(--s-md); border-bottom: 1px solid var(--line); }
+    main { padding: var(--s-xl) var(--s-md) var(--s-section); }
+  }
+
+  /* ===== Type: display sizes for headings, Inter for the rest ===== */
+  h1, h2, h3, details.sec { scroll-margin-top: var(--s-md); }
+  /* display-lg */
+  h1 { font: 500 56px/1.05 var(--font-display); letter-spacing: -2px; color: var(--text); margin: 0 0 var(--s-md); }
+  /* display-sm */
+  h2 { font: 500 32px/1.15 var(--font-display); letter-spacing: -0.5px; color: var(--text); margin: 0; }
+  /* title-lg */
+  h3 { font: 600 24px/1.3 var(--font-body); letter-spacing: -0.3px; color: var(--text); margin: 0; }
+  p { margin: var(--s-sm) 0; }
+  /* title-md: the lead line */
+  .lead { font: 600 18px/1.4 var(--font-body); color: var(--text-muted); margin: 0 0 var(--s-xl); }
+  /* links: blue; their pill and mark are set below */
+  a { color: var(--link); text-decoration: none; }
+  code, .mono { font-family: var(--font-mono); font-size: 13px; }
+  code { background: var(--chip); border-radius: var(--r-xs); padding: 1px 6px; color: var(--chip-text); }
+  /* Three kinds of link, one look: blue text in a dark pill (inside a coloured box, see below). One mark says where it goes
+     (references/page.md, "Three kinds of link"):
+     1. A section of this page (#id): no mark.
+     2. A file, opened in VS Code: underlined.
+     3. Another page (an .html page or a web address): ↗ at the end.
+     Code that is not a link is a grey chip with white code text (--chip). A diagram box's file line follows rule 2. */
+  :root { --chip: var(--card); --chip-text: var(--text); --link-chip: var(--card); --link-text: var(--link); }
+  /* Inside a coloured card, a link drops the blue and the dark pill: it takes the same light chip as code
+     there, in the card's dark ink, and keeps its mark (underline or arrow). */
+  .problem, .answer, .note { --chip: rgba(255,255,255,.45); --chip-text: var(--on-color); --link-chip: rgba(255,255,255,.45); --link-text: var(--on-color); }
+  /* the dark cells inside the problem section keep blue links */
+  .cell { --link-chip: var(--page); --link-text: var(--link); }
+  .step, .player-caption, .code-ref, .explainers, .link-demo { --chip: var(--page); --link-chip: var(--page); }
+  a:not(.toc a):not(.dia a) { padding: 1px 10px; border-radius: var(--r-pill); background: var(--link-chip); color: var(--link-text); text-decoration: none; white-space: nowrap; }
+  a[href^="vscode:"]:not(.toc a):not(.dia a) { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:is([href*=".html"], [href^="http"]):not([href^="#"]):not([href^="vscode:"]):not(.dia a)::after { content: "\2197"; margin-left: 6px; }
+  a code, .problem a code, .answer a code, .step a code, .player-caption a code, .note a code { font: inherit; color: inherit; background: none; padding: 0; }
+
+  /* ===== Problem section: feature-card-lavender, dark ink text ===== */
+  .problem { background: var(--brand-lavender); color: var(--on-color); border-radius: var(--r-xl); padding: var(--s-xl); margin: 0 0 var(--s-lg); }
+  .problem > b:first-child { display: block; font: 500 32px/1.15 var(--font-display); letter-spacing: -0.5px; margin-bottom: var(--s-sm); }
+  .problem b { color: var(--on-color); }
+  .problem ol, .problem ul { padding-left: 20px; }
+  /* the two cells inside it: dark cards on the lavender */
+  .cells { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--s-sm); margin: var(--s-lg) 0; }
+  .cell { flex: 1 1 220px; background: var(--page); border-radius: var(--r-lg); padding: var(--s-md) var(--s-lg); font: 600 16px/1.4 var(--font-body); color: var(--text); }
+  .cell small { display: block; font: 600 12px/1.4 var(--font-body); letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-xs); }
+  .cell.ok small::before, .cell.bad small::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .cell.ok small::before { background: var(--success); }
+  .cell.bad small::before { background: var(--error); }
+  .arrow { align-self: center; color: var(--on-color); font-size: 24px; }
+
+  /* ===== Badge pills: the brand colour carries the meaning ===== */
+  .st { display: inline-block; font: 500 13px/1.4 var(--font-body); padding: 4px 12px; border-radius: var(--r-pill); white-space: nowrap; color: var(--on-color); background: var(--surface-card); }
+  .st.done { background: var(--brand-mint); }
+  .st.open { background: var(--brand-ochre); }
+
+  /* ===== Tasks: a tick box, the task's number as a pill, then the task ===== */
+  .step { display: grid; grid-template-columns: 24px 40px 1fr; column-gap: var(--s-sm); align-items: start; margin: var(--s-md) 0; padding: var(--s-lg); background: var(--card); border-radius: var(--r-lg); }
+  .step .check { width: 24px; height: 24px; margin-top: 2px; border: 2px solid var(--text-muted); border-radius: var(--r-xs); display: grid; place-items: center; background: var(--page); }
+  .step.done .check { background: var(--canvas); border-color: var(--canvas); }
+  .step.done .check::after { content: "\2713"; color: var(--on-color); font: 600 15px/1 var(--font-body); }
+  .step .num { margin-top: 2px; padding: 4px 0; border-radius: var(--r-pill); background: var(--page); color: var(--text); font: 500 13px/1.4 var(--font-body); text-align: center; font-variant-numeric: tabular-nums; }
+  .step-title { font: 600 18px/1.4 var(--font-body); color: var(--text); margin: 0 0 var(--s-xxs); }
+  .step-title .st { margin-left: var(--s-xs); vertical-align: 2px; }
+  .step-title + p { margin: var(--s-xs) 0 0; }
+  .step code { background: var(--page); }
+
+  /* ===== Tables (only when the user asks for one): product-mockup-card ===== */
+  .table-wrap { overflow-x: auto; background: var(--page); border: 1px solid var(--line); border-radius: var(--r-lg); margin: var(--s-md) 0; }
+  table { width: 100%; border-collapse: collapse; font: 400 14px/1.55 var(--font-body); }
+  th, td { text-align: left; padding: var(--s-sm) var(--s-md); border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  th { background: var(--card); color: var(--text-muted); font: 600 12px/1.4 var(--font-body); letter-spacing: 1.5px; text-transform: uppercase; }
+
+  /* ===== Sections collapse like the sidebar groups; 96px between major sections ===== */
+  details.sec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: var(--s-sm); }
+  details.sec > summary::-webkit-details-marker { display: none; }
+  details.sec > summary::before { content: ""; flex: none; width: 9px; height: 9px; border-right: 2px solid var(--text); border-bottom: 2px solid var(--text); transform: rotate(-45deg); transition: transform .15s; }
+  details.sec[open] > summary::before { transform: rotate(45deg); }
+  details.sec.l2 > summary { margin: var(--s-section) 0 var(--s-md); }
+  details.sec.l3 > summary { margin: var(--s-xxl) 0 var(--s-sm); }
+
+  /* ===== Diagram block ===== */
+  /* title-md */
+  .dia-title { font: 600 18px/1.4 var(--font-body); color: var(--text); margin: var(--s-xl) 0 var(--s-xs); }
+  /* Legend: a coloured dot and what it means, never the colour's name. */
+  .legend { display: flex; flex-wrap: wrap; gap: var(--s-xs) var(--s-lg); align-items: center; font: 500 13px/1.4 var(--font-body); color: var(--text-muted); margin: var(--s-sm) 0; }
+  .sw-ochre, .sw-coral, .sw-mint, .sw-pink, .sw-lavender { display: inline-block; width: 14px; height: 14px; border-radius: var(--r-pill); vertical-align: -2px; margin-right: 2px; }
+  .sw-ochre { background: var(--brand-ochre); } .sw-coral { background: var(--brand-coral); } .sw-mint { background: var(--brand-mint); }
+  .sw-pink { background: var(--brand-pink); } .sw-lavender { background: var(--brand-lavender); }
+  /* The panel is a window onto the diagram: drag its bottom bar to change its height,
+     drag inside it to move the diagram, zoom with the buttons or Cmd/Ctrl + scroll (the script below). */
+  .dia { position: relative; height: 480px; min-height: 160px; background: var(--card); border-radius: var(--r-xl); margin: var(--s-sm) 0; overflow: hidden; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+  .dia.dragging { cursor: grabbing; }
+  .dia pre.mermaid { position: absolute; left: 0; top: 0; margin: 0; background: none; transform-origin: 0 0; }
+  /* arrow labels that reach past Mermaid's frame stay visible */
+  .dia pre.mermaid svg { display: block; overflow: visible; }
+  .dia-tools { position: absolute; top: var(--s-sm); right: var(--s-sm); z-index: 2; display: flex; gap: var(--s-xxs); padding: var(--s-xxs); border-radius: var(--r-md); background: var(--page); border: 1px solid var(--line); cursor: default; }
+  .dia-tools button { font: 600 14px/1 var(--font-body); height: 32px; min-width: 32px; padding: 0 var(--s-sm); border-radius: var(--r-sm); border: none; background: none; color: var(--text); cursor: pointer; }
+  .dia-tools button:active { background: var(--card); }
+  .dia-tools .dia-zoom { min-width: 60px; color: var(--text-muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .dia-grip { position: absolute; left: 0; right: 0; bottom: 0; height: 18px; z-index: 2; display: grid; place-items: center; cursor: ns-resize; touch-action: none; }
+  .dia-grip::before { content: ""; width: 56px; height: 4px; border-radius: var(--r-pill); background: var(--text-muted); opacity: .5; transition: opacity .15s; }
+  .dia-grip:hover::before, .dia.resizing .dia-grip::before { opacity: 1; }
+  /* Boxes that open a file: only the file line is blue and underlined, like a file link; blue outline on hover. */
+  .dia svg a, .dia svg g.linked { cursor: pointer; }
+  .dia svg a .nodeLabel, .dia svg a .nodeLabel span { text-decoration: none !important; }
+  .dia svg a .nodeLabel b:first-of-type { color: var(--link) !important; text-decoration: underline; text-underline-offset: 3px; }
+  .dia svg a:hover rect, .dia svg a:hover polygon { stroke: var(--link) !important; stroke-width: 3px !important; }
+  /* Rounded boxes, DESIGN.md rounded.md and rounded.lg */
+  .dia svg g.node rect { rx: 12px; ry: 12px; }
+  .dia svg g.cluster rect { rx: 16px; ry: 16px; }
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="toc">
+  <div class="toc-head"><p class="toc-title">On this page</p><span class="toc-tools"><button type="button" data-toc="open">Expand all</button><button type="button" data-toc="close">Collapse all</button></span></div>
+  <ol>
+{{INDEX}}
+  </ol>
+</aside>
+<main>
+<h1>{{TITLE}}</h1>
+<p class="lead">{{LEAD}}</p>
+{{BODY}}
+</main>
+</div>
+<script>
+  // Local file links (path#L12) open that line in VS Code. The absolute path is worked out from where this page is opened.
+  function toVSCode(href) {
+    var match = href.match(/^([^#:]+)#L(\d+)$/);
+    if (match) {
+      var absolutePath = decodeURIComponent(new URL(match[1], location.href).pathname);
+      return 'vscode://file' + absolutePath + ':' + match[2];
+    } else {
+      return href;
+    }
+  }
+  document.querySelectorAll('a[href]').forEach(function (a) {
+    var href = a.getAttribute('href');
+    if (toVSCode(href) !== href) {
+      a.href = toVSCode(href);
+      a.title = 'Open in VS Code: ' + href.replace('#L', ':');
+    }
+  });
+
+  // Links to another HTML page say so on hover too.
+  document.querySelectorAll('a:is([href*=".html"], [href^="http"]):not([href^="#"]):not([href^="vscode:"])').forEach(function (a) {
+    a.title = 'Opens another page: ' + a.getAttribute('href');
+  });
+
+  // Highlight the section being read in the left-hand index.
+  // Leaf entries are links; group entries are the summary rows, which carry their section in data-href.
+  var tocLinks = Array.from(document.querySelectorAll('.toc a, .toc summary'));
+  var headings = tocLinks.map(function (entry) {
+    if (entry.tagName === 'A') {
+      return document.querySelector(entry.getAttribute('href'));
+    } else {
+      return document.querySelector(entry.dataset.href);
+    }
+  });
+  function markActive() {
+    var current = 0;
+    headings.forEach(function (h, i) {
+      if (h && h.getClientRects().length > 0 && h.getBoundingClientRect().top < 120) {
+        current = i;
+      }
+    });
+    // If the section being read is inside a collapsed group, highlight that group's own entry instead.
+    var target = tocLinks[current];
+    var hiddenList = target.closest('details:not([open]) > ol');
+    while (hiddenList) {
+      target = hiddenList.parentElement.querySelector(':scope > summary');
+      hiddenList = target.closest('details:not([open]) > ol');
+    }
+    tocLinks.forEach(function (a) { a.classList.toggle('active', a === target); });
+  }
+  document.addEventListener('scroll', markActive, { passive: true });
+  // A group's 'toggle' event does not bubble, so listen in the capture phase.
+  document.addEventListener('toggle', markActive, true);
+  markActive();
+
+  // Expand all / Collapse all, and remember which groups are open between reloads.
+  var groups = Array.from(document.querySelectorAll('.toc details[data-group]'));
+  function saveOpenGroups() {
+    try {
+      localStorage.setItem('toc-open-CHANGE-ME', JSON.stringify(groups.filter(function (d) { return d.open; }).map(function (d) { return d.dataset.group; })));
+    } catch (error) {
+      // Storage unavailable: the index still works, it just forgets.
+    }
+  }
+  try {
+    var saved = JSON.parse(localStorage.getItem('toc-open-CHANGE-ME'));
+    if (Array.isArray(saved)) {
+      groups.forEach(function (d) { d.open = saved.indexOf(d.dataset.group) !== -1; });
+    }
+  } catch (error) {
+    // Storage unavailable: keep the default open groups.
+  }
+  groups.forEach(function (d) { d.addEventListener('toggle', saveOpenGroups); });
+  document.querySelectorAll('.toc-tools button').forEach(function (button) {
+    button.addEventListener('click', function () {
+      groups.forEach(function (d) { d.open = button.dataset.toc === 'open'; });
+    });
+  });
+
+  // Clicking an index entry opens every collapsed section on the way to it.
+  document.querySelectorAll('.toc a').forEach(function (link) {
+    link.addEventListener('click', function () {
+      var el = document.querySelector(link.getAttribute('href'));
+      while (el) {
+        if (el.tagName === 'DETAILS') {
+          el.open = true;
+        }
+        el = el.parentElement;
+      }
+    });
+  });
+</script>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  // The DESIGN.md dark palette (references/diagrams.md, "Colours"); render checks use the same values.
+  mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'loose', themeVariables: {
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif', fontSize: '16px',
+    background: '#1a2a2a', primaryColor: '#1a2a2a', primaryTextColor: '#ffffff', primaryBorderColor: '#a0a0a0',
+    nodeBorder: '#a0a0a0', lineColor: '#a0a0a0', secondaryColor: '#0a1a1a', tertiaryColor: '#0a1a1a',
+    clusterBkg: '#0a1a1a', clusterBorder: '#3a3a3a', titleColor: '#ffffff', edgeLabelBackground: '#0a1a1a'
+  } });
+  await mermaid.run({ querySelector: 'pre.mermaid' });
+  window.mermaidRendered = true; // playable diagrams wait for this (references/playable.md)
+  document.dispatchEvent(new Event('mermaid-rendered'));
+
+  // Flowchart boxes carry their file through Mermaid's own `click … href`; point those at VS Code too.
+  document.querySelectorAll('.dia svg a').forEach(function (a) {
+    var href = a.getAttribute('xlink:href') || a.getAttribute('href') || '';
+    if (toVSCode(href) !== href) {
+      a.setAttribute('xlink:href', toVSCode(href));
+      a.setAttribute('href', toVSCode(href));
+    }
+  });
+
+  // Each diagram panel: resize its height from the bottom bar, zoom with the buttons or Cmd/Ctrl + scroll
+  // (a trackpad pinch counts), drag to move, double-click to fit. Set up once the panel is visible.
+  function makeZoomable(dia) {
+    if (dia.dataset.zoomable || dia.clientWidth === 0) {
+      return;
+    }
+    dia.dataset.zoomable = 'yes';
+    var pre = dia.querySelector('pre.mermaid');
+    var svg = pre.querySelector('svg');
+    var tools = document.createElement('div');
+    tools.className = 'dia-tools';
+    tools.innerHTML = '<button type="button" data-zoom="out" title="Zoom out">−</button>'
+      + '<button type="button" data-zoom="actual" class="dia-zoom" title="Actual size">100%</button>'
+      + '<button type="button" data-zoom="in" title="Zoom in">+</button>'
+      + '<button type="button" data-zoom="fit" title="Fit the whole diagram (or double-click)">Fit</button>';
+    var grip = document.createElement('div');
+    grip.className = 'dia-grip';
+    grip.title = 'Drag to make the panel taller or shorter';
+    dia.append(tools, grip);
+
+    var TOP = 60, PAD = 24, BOTTOM = 32;
+    var scale = 1, x = 0, y = 0;
+    function size() {
+      var view = svg.viewBox.baseVal;
+      svg.style.maxWidth = 'none';
+      svg.style.width = view.width + 'px';
+      svg.style.height = view.height + 'px';
+      return view;
+    }
+    function apply() {
+      pre.style.transform = 'translate(' + x + 'px, ' + y + 'px) scale(' + scale + ')';
+      tools.querySelector('.dia-zoom').textContent = Math.round(scale * 100) + '%';
+    }
+    function fit() {
+      var view = size();
+      var room = { w: dia.clientWidth - 2 * PAD, h: dia.clientHeight - TOP - BOTTOM };
+      scale = Math.min(1, room.w / view.width, room.h / view.height);
+      x = (dia.clientWidth - view.width * scale) / 2;
+      y = TOP + (room.h - view.height * scale) / 2;
+      apply();
+    }
+    function zoomAt(newScale, cx, cy) {
+      newScale = Math.min(4, Math.max(0.2, newScale));
+      x = cx - (cx - x) * newScale / scale;
+      y = cy - (cy - y) * newScale / scale;
+      scale = newScale;
+      apply();
+    }
+    // Start tall enough to show the whole diagram at full width, but never taller than 70% of the window.
+    var view = size();
+    var widthScale = Math.min(1, (dia.clientWidth - 2 * PAD) / view.width);
+    dia.style.height = Math.round(Math.min(TOP + view.height * widthScale + BOTTOM, window.innerHeight * 0.7)) + 'px';
+    fit();
+
+    tools.addEventListener('click', function (event) {
+      var button = event.target.closest('button');
+      if (button) {
+        var cx = dia.clientWidth / 2, cy = dia.clientHeight / 2;
+        if (button.dataset.zoom === 'in') {
+          zoomAt(scale * 1.25, cx, cy);
+        } else if (button.dataset.zoom === 'out') {
+          zoomAt(scale / 1.25, cx, cy);
+        } else if (button.dataset.zoom === 'actual') {
+          zoomAt(1, cx, cy);
+        } else {
+          fit();
+        }
+      }
+    });
+    dia.addEventListener('wheel', function (event) {
+      var box = dia.getBoundingClientRect();
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        zoomAt(scale * Math.exp(-event.deltaY * 0.01), event.clientX - box.left, event.clientY - box.top);
+      } else if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+        // A sideways two-finger swipe moves the diagram; an up/down scroll still scrolls the page.
+        event.preventDefault();
+        x -= event.deltaX;
+        apply();
+      }
+    }, { passive: false });
+    dia.addEventListener('dblclick', function (event) {
+      if (!event.target.closest('.dia-tools, .dia-grip')) {
+        fit();
+      }
+    });
+
+    // Drag to move. The pointer is only captured once it has really moved, so a plain click on a box still opens its file.
+    var drag = null;
+    dia.addEventListener('pointerdown', function (event) {
+      if (event.button === 0 && !event.target.closest('.dia-tools, .dia-grip')) {
+        drag = { id: event.pointerId, sx: event.clientX, sy: event.clientY, x: x, y: y, moved: false };
+      }
+    });
+    dia.addEventListener('pointermove', function (event) {
+      if (drag && event.pointerId === drag.id) {
+        var dx = event.clientX - drag.sx, dy = event.clientY - drag.sy;
+        if (!drag.moved && Math.hypot(dx, dy) > 4) {
+          drag.moved = true;
+          dia.setPointerCapture(event.pointerId);
+          dia.classList.add('dragging');
+        }
+        if (drag.moved) {
+          x = drag.x + dx;
+          y = drag.y + dy;
+          apply();
+        }
+      }
+    });
+    function endDrag(event) {
+      if (drag && event.pointerId === drag.id) {
+        if (drag.moved) {
+          // Swallow the click that follows a drag, so letting go over a box does not open its file.
+          dia.addEventListener('click', function (click) { click.preventDefault(); click.stopPropagation(); }, { capture: true, once: true });
+        }
+        drag = null;
+        dia.classList.remove('dragging');
+      }
+    }
+    dia.addEventListener('pointerup', endDrag);
+    dia.addEventListener('pointercancel', endDrag);
+
+    // Drag the bottom bar to resize the panel; the diagram stays where it is.
+    grip.addEventListener('pointerdown', function (event) {
+      event.preventDefault();
+      grip.setPointerCapture(event.pointerId);
+      var startY = event.clientY, startH = dia.clientHeight;
+      dia.classList.add('resizing');
+      function move(moveEvent) {
+        dia.style.height = Math.max(160, startH + moveEvent.clientY - startY) + 'px';
+      }
+      function up() {
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', up);
+        dia.classList.remove('resizing');
+      }
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', up);
+    });
+  }
+  document.querySelectorAll('.dia').forEach(makeZoomable);
+  // A diagram inside a collapsed section is set up when the section opens.
+  document.addEventListener('toggle', function () {
+    document.querySelectorAll('.dia').forEach(makeZoomable);
+  }, true);
+</script>
+</body>
+</html>
